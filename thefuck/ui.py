@@ -6,7 +6,6 @@ from .exceptions import NoRuleMatched
 from .system import get_key
 from .utils import get_alias
 from . import logs, const
-from .types import CorrectedCommand
 
 
 def read_actions():
@@ -81,10 +80,13 @@ def select_command(corrected_commands):
 
     logs.confirm_text(selector.value)
 
-    for action in read_actions():
+    selected = False
+    while not selected:
+        action = next(read_actions())
+
         if action == const.ACTION_SELECT:
             sys.stderr.write('\n')
-            return selector.value
+            selected = True
         elif action == const.ACTION_ABORT:
             logs.failed('\nAborted')
             return
@@ -95,26 +97,20 @@ def select_command(corrected_commands):
             selector.next()
             logs.confirm_text(selector.value)
 
+    if settings.require_double_confirmation and selector.value.script in const.DOUBLE_CONFIRMATION_SCRIPTS:
+        return double_confirm(selector)
 
-def confirm_command(confirmation_text):
-    """Returns:
+    return selector.value
 
-     - the first command when confirmation disabled;
-     - None when ctrl+c pressed;
-     - selected command.
 
-    :type corrected_commands: Iterable[thefuck.types.CorrectedCommand]
-    :rtype: thefuck.types.CorrectedCommand | None
+def double_confirm(selector):
+    confirmation_text = const.DOUBLE_CONFIRMATION_SCRIPTS[selector.value.script]
+    logs.double_confirm_text(confirmation_text)
 
-    """
-
-    logs.confirm_text(CorrectedCommand(confirmation_text, None, 0))
-
-    action = read_actions()
     for action in read_actions():
         if action == const.ACTION_SELECT:
-            logs.confirmation(True, confirmation_text)
-            return True
+            sys.stderr.write('\n')
+            return selector.value
         elif action == const.ACTION_ABORT:
-            logs.confirmation(False, confirmation_text)
-            return False
+            logs.failed('\nAborted')
+            return

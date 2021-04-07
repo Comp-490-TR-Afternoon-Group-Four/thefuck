@@ -6,7 +6,7 @@ from .. import logs, types, const
 from ..conf import settings
 from ..corrector import get_corrected_commands
 from ..exceptions import EmptyCommand
-from ..ui import select_command, confirm_command
+from ..ui import select_command
 from ..utils import get_alias, get_all_executables
 
 
@@ -29,7 +29,6 @@ def _get_raw_command(known_args):
 def fix_command(known_args):
     """Fixes previous command. Used when `thefuck` called without arguments."""
     settings.init(known_args)
-    double_check_commands = {"reboot": "reboot system?"}
     with logs.debug_time('Total'):
         logs.debug(u'Run with settings: {}'.format(pformat(settings)))
         raw_command = _get_raw_command(known_args)
@@ -43,11 +42,7 @@ def fix_command(known_args):
         corrected_commands = get_corrected_commands(command)
         selected_command = select_command(corrected_commands)
 
-        confirmation = True
-        if selected_command.script in double_check_commands:
-            confirmation = confirm_command(double_check_commands[selected_command.script])
-
-        if selected_command and confirmation:
+        if selected_command:
             selected_command.run(command)
         else:
             sys.exit(1)
